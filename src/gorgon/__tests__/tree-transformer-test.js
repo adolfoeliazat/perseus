@@ -1,7 +1,4 @@
 const assert = require("assert");
-const PerseusMarkdown = require("../../perseus-markdown.jsx");
-const parse = PerseusMarkdown.parse;
-
 const TreeTransformer = require("../tree-transformer.js");
 
 describe("gorgon tree transformer", () => {
