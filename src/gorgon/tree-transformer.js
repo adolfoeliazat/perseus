@@ -1,10 +1,10 @@
 // This class is an internal utility that just treats an array as a stack
-// and gives us a top method so we don't have to do the a[a.length-1] thing
+// and gives us a top() method so we don't have to do the a[a.length-1] thing
 // all the time. The values() method returns a copy of the internal
 // array so we don't have to worry about clients altering our state
 class Stack {
-    constructor() {
-        this.stack = [];
+    constructor(array) {
+        this.stack = array ? array.slice(0) : [];
     }
     push(v) {
         this.stack.push(v);
@@ -18,8 +18,25 @@ class Stack {
     values() {
         return this.stack.slice(0);
     }
+    size() {
+        return this.stack.length;
+    }
     toString() {
         return this.stack.toString();
+    }
+    clone() {
+        return new Stack(this.stack);
+    }
+    equals(that) {
+        if (!that || !that.stack || that.stack.length !== this.stack.length) {
+            return false;
+        }
+        for (let i = 0; i < this.stack.length; i++) {
+            if (this.stack[i] !== that.stack[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
@@ -34,20 +51,17 @@ class TraversalState {
         // node that is currently being traversed.
         this._currentNode = null;
 
-        // TODO: is this actually all that useful?
-        this._currentNodeType = null;
-
         // This is a stack of the objects and arrays that we've
         // traversed through before reaching the currentNode.
         // It is different than the ancestors array.
         this._containers = new Stack();
 
-        // This stack has the same number of elements as the ancestors
+        // This stack has the same number of elements as the _containers
         // stack. The last element of this._indexes[] is the index of
-        // the current node in the object or array that is the last elemnet
+        // the current node in the object or array that is the last element
         // of this._containers[]. If the last element of this._containers[] is
         // an array, then the last element of this stack will be a number.
-        // Otherwise if the last ancestor is an object, then the last index
+        // Otherwise if the last container is an object, then the last index
         // will be a string property name.
         this._indexes = new Stack();
 
@@ -55,35 +69,18 @@ class TraversalState {
         // It is different than the containers[] stack because it only
         // includes nodes, not arrays.
         this._ancestors = new Stack();
-
-        // This stack contains the type properties of all of the nodes
-        // in the ancestors stack. This will be useful for matching
-        // CSS-style selectors.
-        this._ancestorTypes = new Stack();
-
-        // At any point in the traversal, this property will hold the
-        // concatenated text content of the currentNode and its descendants.
-        this._textContent = "";
     }
 
     currentNode() {
         return this._currentNode;
     }
 
-    currentNodeType() {
-        return this._currentNodeType;
-    }
-
-    textContent() {
-        return this._textContent;
+    parent() {
+        return this._ancestors.top();
     }
 
     ancestors() {
         return this._ancestors.values();
-    }
-
-    ancestorTypes() {
-        return this._ancestorTypes.values();
     }
 
     nextSibling() {
@@ -178,6 +175,74 @@ class TraversalState {
             parent[index] = newNodes;
         }
     }
+
+    clone() {
+        let clone = new TraversalState(this.root);
+        clone._currentNode = this._currentNode;
+        clone._containers = this._containers.clone();
+        clone._indexes = this._indexes.clone();
+        clone._ancestors = this._ancestors.clone();
+        return clone;
+    }
+
+    equals(that) {
+        return (
+            this.root === that.root &&
+            this._currentNode === that._currentNode &&
+            this._containers.equals(that._containers) &&
+            this._indexes.equals(that._indexes) &&
+            this._ancestors.equals(that._ancestors)
+        );
+    }
+
+    // Returns true iff this node has an ancestor
+    hasParent() {
+        return this._ancestors.size() !== 0;
+    }
+
+    // Returns true iff the current node has a previous sibling
+    hasPreviousSibling() {
+        return Array.isArray(this._containers.top()) && this._indexes.top() > 0;
+    }
+
+    // Modify this traversal state object to have the state it would have
+    // had when visiting the previous sibling. Note that you may want to
+    // use clone() to make a copy before modifying the state object like this.
+    goToPreviousSibling() {
+        if (!this.hasPreviousSibling()) {
+            throw new Error(
+                "goToPreviousSibling(): node has no previous sibling"
+            );
+        }
+
+        this._currentNode = this.previousSibling();
+        let index = this._indexes.pop();
+        this._indexes.push(index - 1);
+    }
+
+    // Modify this object to look like it will look when we (later) visit
+    // the ancestor node of this node. Don't modify the instance passed
+    // to the tree traversal callback. Instead, make a copy with clone()
+    // and modify that. This method is useful when matching CSS-style
+    // parent and ancestor selectors.
+    goToParent() {
+        if (!this.hasParent()) {
+            throw new Error("goToParent(): node has no ancestor");
+        }
+
+        this._currentNode = this._ancestors.pop();
+
+        // We need to pop the containers and indexes stacks at least once
+        // and more as needed until we restore the invariant that
+        // this._containers.top()[this.indexes.top()] === this._currentNode
+        while (
+            this._containers.size() &&
+            this._containers.top()[this._indexes.top()] !== this._currentNode
+        ) {
+            this._containers.pop();
+            this._indexes.pop();
+        }
+    }
 }
 
 class TreeTransformer {
@@ -199,12 +264,18 @@ class TreeTransformer {
         this._traverse(this.root, new TraversalState(this.root), f);
     }
 
+    // Do a post-order traversal of node and its descendants, invoking
+    // the callback function f() once for each node and returning the
+    // concatenated text content of the node and its descendants. f()
+    // is passed three arguments: the current node, a TraversalState
+    // object representing the current state of the traversal, and
+    // a string that holds the concatenated text of the node and its
+    // descendants.
     _traverse(node, state, f) {
         let content = "";
         if (this.isNode(node)) {
             state._containers.push(node);
             state._ancestors.push(node);
-            state._ancestorTypes.push(node.type);
 
             if (node.type === "text" && typeof node.content === "string") {
                 content = node.content;
@@ -222,6 +293,7 @@ class TreeTransformer {
                 if (key === "type") return;
                 let value = node[key];
                 // Ignore properties that are null or primitive
+                // Only recurse on objects and arrays.
                 if (value && typeof value === "object") {
                     state._indexes.push(key);
                     content += this._traverse(value, state, f);
@@ -229,13 +301,14 @@ class TreeTransformer {
                 }
             });
 
-            state._currentNodeType = state._ancestorTypes.pop();
             state._currentNode = state._ancestors.pop();
             state._containers.pop();
-            state._textContent = content;
 
-            // Post-order callback. Do we also need a pre-order as well?
-            f(node, state);
+            // Note that this is post-order traversal. We call the
+            // callback on the way back up the tree, not on the way down.
+            // That way we already know all the content contained within
+            // the node.
+            f(node, state, content);
         } else if (Array.isArray(node)) {
             state._containers.push(node);
             // We need to test the length each time because

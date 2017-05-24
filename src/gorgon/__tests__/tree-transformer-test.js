@@ -44,6 +44,7 @@ describe("gorgon tree transformer", () => {
     const trees = [tree1, tree2, tree3, tree4];
 
     const postOrderTraversalOrder = [1, 3, 2, 5, 6, 7, 4, 0];
+    const parentNodeIds = [-1, 0, 0, 2, 0, 4, 4, 4];
     const previousNodeIds = [-1, -1, 1, -1, 2, -1, 5, 6];
     const nextNodeIds = [-1, 2, 4, -1, -1, 6, 7, -1];
 
@@ -77,16 +78,16 @@ describe("gorgon tree transformer", () => {
             }
         );
 
-        it("tracks the current node and current type " + treenum, () => {
+        it("tracks the current node " + treenum, () => {
             new TreeTransformer(tree).traverse((n, state) => {
                 assert.equal(state.currentNode(), n);
-                assert.equal(state.currentNodeType(), n.type);
             });
         });
 
         it("correctly gets the siblings for each node " + treenum, () => {
             new TreeTransformer(tree).traverse((n, state) => {
                 const previd = previousNodeIds[n.id];
+                assert.equal(state.hasPreviousSibling(), previd >= 0);
                 assert.equal(
                     state.previousSibling(),
                     previd >= 0 ? nodes[previd] : null
@@ -100,42 +101,45 @@ describe("gorgon tree transformer", () => {
             });
         });
 
-        it(
-            "knows the ancestors and ancestor types for each node: " + treenum,
-            () => {
-                const ancestorsById = [
-                    [],
-                    [0],
-                    [0],
-                    [0, 2],
-                    [0],
-                    [0, 4],
-                    [0, 4],
-                    [0, 4],
-                ];
-                const ancestorTypesById = [
-                    [],
-                    ["root"],
-                    ["root"],
-                    ["root", "em"],
-                    ["root"],
-                    ["root", "list"],
-                    ["root", "list"],
-                    ["root", "list"],
-                ];
+        it("knows the ancestors for each node: " + treenum, () => {
+            const ancestorsById = [
+                [],
+                [0],
+                [0],
+                [0, 2],
+                [0],
+                [0, 4],
+                [0, 4],
+                [0, 4],
+            ];
+            const ancestorTypesById = [
+                [],
+                ["root"],
+                ["root"],
+                ["root", "em"],
+                ["root"],
+                ["root", "list"],
+                ["root", "list"],
+                ["root", "list"],
+            ];
 
-                new TreeTransformer(tree).traverse((n, state) => {
-                    assert.deepEqual(
-                        state.ancestors(),
-                        ancestorsById[n.id].map(id => nodes[id])
-                    );
-                    assert.deepEqual(
-                        state.ancestorTypes(),
-                        ancestorTypesById[n.id]
-                    );
-                });
-            }
-        );
+            new TreeTransformer(tree).traverse((n, state) => {
+                assert.equal(state.hasParent(), ancestorsById[n.id].length > 0);
+                let ancestorids = ancestorsById[n.id];
+                assert.equal(
+                    state.parent(),
+                    nodes[ancestorids[ancestorids.length - 1]]
+                );
+                assert.deepEqual(
+                    state.ancestors(),
+                    ancestorsById[n.id].map(id => nodes[id])
+                );
+                assert.deepEqual(
+                    ancestorsById[n.id].map(id => nodes[id].type),
+                    ancestorTypesById[n.id]
+                );
+            });
+        });
 
         it("computes the textContent for each node " + treenum, () => {
             const textContentForNode = [
@@ -149,8 +153,8 @@ describe("gorgon tree transformer", () => {
                 "C",
             ];
 
-            new TreeTransformer(tree).traverse((n, state) => {
-                assert.equal(state.textContent(), textContentForNode[n.id]);
+            new TreeTransformer(tree).traverse((n, state, content) => {
+                assert.equal(content, textContentForNode[n.id]);
             });
         });
 
@@ -354,6 +358,58 @@ describe("gorgon tree transformer", () => {
                     getTraversalOrder(copy),
                     expectedTraversals[id]
                 );
+            }
+        });
+
+        it("goToParent() and goToPreviousSibling() work " + treenum, () => {
+            // Traverse the tree, saving copies of the state object
+            // for each node. Then check that goToParent() and
+            // goToPreviousSibling() on each saved state object
+            // modify the states in apprpriate ways.
+            let states = [];
+
+            const tt = new TreeTransformer(tree);
+            tt.traverse((n, state, content) => {
+                states[n.id] = state.clone();
+                // Verify that a clone() and equal() work as expected
+                assert.ok(
+                    state.equals(states[n.id]),
+                    `Clone of state for node ${n.id} not equal to itself`
+                );
+            });
+
+            // Check that goToPreviousSibling() works
+            for (let n = 0; n < states.length; n++) {
+                let state = states[n].clone();
+                let previousNodeId = previousNodeIds[n];
+                if (previousNodeId === -1) {
+                    assert.throws(() => {
+                        state.goToPreviousSibling();
+                    }, `goToPreviousSibling() for node ${n} did not throw`);
+                } else {
+                    state.goToPreviousSibling();
+                    assert.ok(
+                        state.equals(states[previousNodeId]),
+                        `goToPreviousSibling() for node ${n} sets wrong state`
+                    );
+                }
+            }
+
+            // Check that goToParent() works
+            for (let n = 0; n < states.length; n++) {
+                let state = states[n].clone();
+                let parentNodeId = parentNodeIds[n];
+                if (parentNodeId === -1) {
+                    assert.throws(() => {
+                        state.goToParent();
+                    }, `goToParent() for node ${n} did not throw`);
+                } else {
+                    state.goToParent();
+                    assert.ok(
+                        state.equals(states[parentNodeId]),
+                        `goToParent() for node ${n} sets wrong state`
+                    );
+                }
             }
         });
     });

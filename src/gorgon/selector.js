@@ -1,7 +1,7 @@
 /*
  * Parse a selector string according to a grammar like this:
  *
- * selector := nodeSelector (combinator nodeSelector)* (pattern)?
+ * selector := nodeSelector (combinator nodeSelector)*
  *
  * combinator := ' ' | '>' | '+' | '~'   // standard CSS3 combinators
  *
@@ -12,11 +12,6 @@
  * // This will be needed for testing heading levels, I think
  * // But I could drop it if I implement those differently
  * attributeMatch := '[' IDENT comparator value ']' // ??? NYI
- *
- * // Patterns only allowed on the last nodeSelector because we
- * // don't have the text content for ancestor nodes
- * pattern := '/' <regular expression> '/'
- *
  */
 class Parser {
     constructor(s) {
@@ -50,14 +45,6 @@ class Parser {
 
             if (!token) {
                 return ns;
-            } else if (token[0] === "/") {
-                let r = this.parseRegexp();
-                if (this.nextToken()) {
-                    throw new SelectorParseError(
-                        "Pattern must be last element of selector"
-                    );
-                }
-                return new NodeSelectorWithPattern(ns, r);
             } else if (token === " ") {
                 this.consume();
                 ns = new AncestorCombinator(ns, this.parseNodeSelector());
@@ -88,68 +75,58 @@ class Parser {
             return new AnyNode();
         } else if (this.isIdentifier()) {
             this.consume();
-            return new NodeSelector(t);
+            return new TypeSelector(t);
         }
 
         throw new SelectorParseError("Expected node type");
-    }
-
-    parseRegexp() {
-        let token = this.nextToken();
-        if (token[0] !== "/") {
-            return null;
-        }
-
-        let pattern, flags;
-        if (token[token.length - 1] === "i") {
-            pattern = token.substring(1, token.length - 2);
-            flags = "i";
-        } else {
-            pattern = token.substring(1, token.length - 1);
-        }
-
-        this.consume();
-        return new RegExp(pattern, flags);
     }
 }
 
 // We break the input string into tokens with this regexp. Token types
 // are identifiers, integers, regular expressions, punctuation and
 // spaces.  Note that spaces tokens are only returned when they appear
-// before an identifier or wildcard token. Regular expression tokens
-// may include an 'i' flag for case-insensitive matching, but other
-// flags are not supported.
-Parser.TOKENS = /([a-zA-Z]\w*)|(\d+)|(\/[^\/]+\/i?)|([>+~\[\]*=/:])|(\s(?=[a-zA-Z\*]))/g;
+// before an identifier or wildcard token and are otherwise omitted.
+Parser.TOKENS = /([a-zA-Z]\w*)|(\d+)|[^\s]|(\s(?=[a-zA-Z\*]))/g;
 
 class Selector {
     static parse(selectorText) {
         return new Parser(selectorText).parse();
     }
-}
 
-class NodeSelectorWithPattern extends Selector {
-    constructor(selector, pattern) {
-        super();
-        this.selector = selector;
-        this.pattern = pattern;
+    // Return an array of the nodes that matched or false if no match
+    match(state) {
+        throw new Error("Selector subclasses must implement match()");
     }
 
     toString() {
-        return this.selector.toString() + this.pattern.toString();
+        return "Unknown selector class";
     }
 }
 
 class AnyNode extends Selector {
+    match(state) {
+        return [state.currentNode()];
+    }
+
     toString() {
         return "*";
     }
 }
 
-class NodeSelector extends Selector {
+class TypeSelector extends Selector {
     constructor(type) {
         super();
         this.type = type;
         this.attributeRequirements = []; // NYI
+    }
+
+    match(state) {
+        let node = state.currentNode();
+        if (node.type == this.type) {
+            return [node];
+        } else {
+            return false;
+        }
     }
 
     toString() {
@@ -170,6 +147,21 @@ class AncestorCombinator extends SelectorCombinator {
         super(left, right);
     }
 
+    match(state) {
+        let rightResult = this.right.match(state);
+        if (rightResult) {
+            state = state.clone();
+            while (state.hasParent()) {
+                state.goToParent();
+                let leftResult = this.left.match(state);
+                if (leftResult) {
+                    return leftResult.concat(rightResult);
+                }
+            }
+        }
+        return false;
+    }
+
     toString() {
         return this.left.toString() + " " + this.right.toString();
     }
@@ -178,6 +170,21 @@ class AncestorCombinator extends SelectorCombinator {
 class ParentCombinator extends SelectorCombinator {
     constructor(left, right) {
         super(left, right);
+    }
+
+    match(state) {
+        let rightResult = this.right.match(state);
+        if (rightResult) {
+            if (state.hasParent()) {
+                state = state.clone();
+                state.goToParent();
+                let leftResult = this.left.match(state);
+                if (leftResult) {
+                    return leftResult.concat(rightResult);
+                }
+            }
+        }
+        return false;
     }
 
     toString() {
@@ -190,6 +197,21 @@ class PreviousCombinator extends SelectorCombinator {
         super(left, right);
     }
 
+    match(state) {
+        let rightResult = this.right.match(state);
+        if (rightResult) {
+            if (state.hasPreviousSibling()) {
+                state = state.clone();
+                state.goToPreviousSibling();
+                let leftResult = this.left.match(state);
+                if (leftResult) {
+                    return leftResult.concat(rightResult);
+                }
+            }
+        }
+        return false;
+    }
+
     toString() {
         return this.left.toString() + " + " + this.right.toString();
     }
@@ -198,6 +220,21 @@ class PreviousCombinator extends SelectorCombinator {
 class SiblingCombinator extends SelectorCombinator {
     constructor(left, right) {
         super(left, right);
+    }
+
+    match(state) {
+        let rightResult = this.right.match(state);
+        if (rightResult) {
+            state = state.clone();
+            while (state.hasPreviousSibling()) {
+                state.goToPreviousSibling();
+                let leftResult = this.left.match(state);
+                if (leftResult) {
+                    return leftResult.concat(rightResult);
+                }
+            }
+        }
+        return false;
     }
 
     toString() {
