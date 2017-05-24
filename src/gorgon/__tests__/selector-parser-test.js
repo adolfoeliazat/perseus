@@ -13,6 +13,8 @@ describe("gorgon selector parser", () => {
         "list ~ para",
         "list list para",
         "para~heading~para~heading",
+        "list, para",
+        "list > para, list text, heading *, heading+para",
     ];
 
     const invalidExpressions = [
@@ -25,6 +27,9 @@ describe("gorgon selector parser", () => {
         "foo*", // Unexpected token
         "*/foo/", // Unexpected token
         "()", // Unexpected token
+        ",",
+        "list,",
+        ",list",
     ];
 
     validExpressions.forEach(s => {

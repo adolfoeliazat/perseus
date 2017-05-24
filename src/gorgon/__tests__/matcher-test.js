@@ -383,4 +383,55 @@ C
         assert.equal(numMatches, 1);
         assert.equal(matchedText, "H");
     });
+
+    it("selector list", () => {
+        const selector = Selector.parse("paragraph, list");
+        const tree = parseTree();
+        const tt = new TreeTransformer(tree);
+        let numMatches = 0;
+        let matchedText = "";
+
+        tt.traverse((n, state, content) => {
+            const match = selector.match(state);
+            if (match !== false) {
+                assert.ok(Array.isArray(match));
+                assert.equal(match.length, 1);
+                assert.equal(match[0], n);
+                assert.ok(n.type === "paragraph" || n.type === "list");
+                matchedText += content;
+                numMatches++;
+            }
+        });
+
+        assert.equal(numMatches, 4);
+        assert.equal(matchedText, "BCDEFGH");
+    });
+
+    it("selector list 2", () => {
+        const selector = Selector.parse("heading, paragraph text, list>text");
+        const tree = parseTree();
+        const tt = new TreeTransformer(tree);
+        let numMatches = 0;
+        let matchedText = "";
+
+        tt.traverse((n, state, content) => {
+            const match = selector.match(state);
+            if (match !== false) {
+                assert.ok(Array.isArray(match));
+                if (n.type === "heading") {
+                    assert.equal(match.length, 1);
+                    assert.equal(match[0], n);
+                } else {
+                    assert.equal(match.length, 2);
+                    assert.equal(match[1], n);
+                    assert.equal(n.type, "text");
+                }
+                matchedText += content;
+                numMatches++;
+            }
+        });
+
+        assert.equal(numMatches, 8);
+        assert.equal(matchedText, "ABCDEFGH");
+    });
 });

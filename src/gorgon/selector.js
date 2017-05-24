@@ -1,7 +1,9 @@
 /*
  * Parse a selector string according to a grammar like this:
  *
- * selector := nodeSelector (combinator nodeSelector)*
+ * selector := treeSelector (, treeSelector)*
+ *
+ * treeSelector := nodeSelector (combinator nodeSelector)*
  *
  * combinator := ' ' | '>' | '+' | '~'   // standard CSS3 combinators
  *
@@ -37,13 +39,48 @@ class Parser {
         return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z");
     }
 
+    skipSpace() {
+        while (this.nextToken() === " ") {
+            this.consume();
+        }
+    }
+
+    // Parse a comma-separarted sequence of tree selectors
     parse() {
+        const ts = this.parseTreeSelector();
+        let token = this.nextToken();
+
+        if (!token) {
+            // If we're at the end of the string we're done
+            return ts;
+        }
+
+        const treeSelectors = [ts];
+        while (token) {
+            // Expect a comma between selectors
+            if (token === ",") {
+                this.consume();
+            } else {
+                throw new SelectorParseError("Expected comma");
+            }
+
+            treeSelectors.push(this.parseTreeSelector());
+            token = this.nextToken();
+        }
+
+        return new SelectorList(treeSelectors);
+    }
+
+    // Parse a sequence of node selectors linked together with
+    // hierarchy combinators: space, >, + and ~.
+    parseTreeSelector() {
+        this.skipSpace();
         let ns = this.parseNodeSelector();
 
         for (;;) {
             const token = this.nextToken();
 
-            if (!token) {
+            if (!token || token === ",") {
                 return ns;
             } else if (token === " ") {
                 this.consume();
@@ -63,11 +100,15 @@ class Parser {
         }
     }
 
+    // Parse a single node selector.
+    // For now, this is just a node type or a wildcard.
+    //
+    // TODO(davidflanagan): we may need to extend this with attribute
+    // selectors like 'heading[level=3]', or with pseudo-classes like
+    // paragraph:first
     parseNodeSelector() {
         // First, skip any whitespace
-        while (this.nextToken() === " ") {
-            this.consume();
-        }
+        this.skipSpace();
 
         const t = this.nextToken();
         if (t === "*") {
@@ -100,6 +141,34 @@ class Selector {
 
     toString() {
         return "Unknown selector class";
+    }
+}
+
+class SelectorList extends Selector {
+    constructor(selectors) {
+        super();
+        this.selectors = selectors;
+    }
+
+    match(state) {
+        for (let i = 0; i < this.selectors.length; i++) {
+            let s = this.selectors[i];
+            let result = s.match(state);
+            if (result) {
+                return result;
+            }
+        }
+        return false;
+    }
+
+    toString() {
+        let result = "";
+        for (let i = 0; i < this.selectors.length; i++) {
+            let s = this.selectors[i];
+            result += i > 0 ? ", " : "";
+            result += s.toString();
+        }
+        return result;
     }
 }
 
