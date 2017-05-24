@@ -2,7 +2,7 @@ const assert = require("assert");
 const Selector = require("../selector.js");
 
 describe("gorgon selector parser", () => {
-    let validExpressions = [
+    const validExpressions = [
         "*",
         " * ",
         "para",
@@ -15,7 +15,7 @@ describe("gorgon selector parser", () => {
         "para~heading~para~heading",
     ];
 
-    let invalidExpressions = [
+    const invalidExpressions = [
         "", // Expected node type
         " ", // Expected node type
         "<", // Expected node type
@@ -29,7 +29,7 @@ describe("gorgon selector parser", () => {
 
     validExpressions.forEach(s => {
         it("parses '" + s + "'", () => {
-            let e = Selector.parse(s);
+            const e = Selector.parse(s);
             assert.ok(e instanceof Selector);
             assert.equal(e.toString().replace(/\s/g, ""), s.replace(/\s/g, ""));
         });
@@ -38,7 +38,7 @@ describe("gorgon selector parser", () => {
     invalidExpressions.forEach(s => {
         it("rejects '" + s + "'", () => {
             assert.throws(() => {
-                let e = Selector.parse(s);
+                Selector.parse(s);
             });
         });
     });

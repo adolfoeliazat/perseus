@@ -48,15 +48,15 @@ C
             }
         });
 
-        let types = Object.keys(selectors);
+        const types = Object.keys(selectors);
 
         // Now traverse the tree again. At each node run all of the
         // selectors we've created. Only those with matching types
         // should match.
         tt.traverse((n, state, content) => {
             types.forEach(type => {
-                let selector = selectors[type];
-                let match = selector.match(state);
+                const selector = selectors[type];
+                const match = selector.match(state);
                 if (n.type === type) {
                     assert.equal(match[0], n);
                 } else {
@@ -78,8 +78,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            let parent = state.parent();
+            const match = selector.match(state);
+            const parent = state.parent();
             if (n.type === "text" && parent.type === "paragraph") {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 2);
@@ -104,10 +104,10 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            let ancestors = state.ancestors();
-            let parent = ancestors.pop();
-            let grandparent = ancestors.pop();
+            const match = selector.match(state);
+            const ancestors = state.ancestors();
+            const parent = ancestors.pop();
+            const grandparent = ancestors.pop();
             if (
                 n.type === "text" &&
                 parent.type === "em" &&
@@ -137,8 +137,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 2);
                 assert.equal(match[0].type, "paragraph");
@@ -161,8 +161,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 3);
                 assert.equal(match[0].type, "paragraph");
@@ -186,8 +186,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 2);
                 assert.equal(match[0].type, "heading");
@@ -211,8 +211,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 3);
                 assert.equal(match[0].type, "heading");
@@ -237,8 +237,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 2);
                 assert.equal(match[0].type, "heading");
@@ -261,8 +261,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 3);
                 assert.equal(match[0].type, "heading");
@@ -286,8 +286,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 3);
                 assert.equal(match[0].type, "list");
@@ -312,8 +312,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 3);
                 assert.equal(match[0].type, "list");
@@ -338,8 +338,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 3);
                 assert.equal(match[0].type, "paragraph");
@@ -365,8 +365,8 @@ C
         let matchedText = "";
 
         tt.traverse((n, state, content) => {
-            let match = selector.match(state);
-            if (match != false) {
+            const match = selector.match(state);
+            if (match !== false) {
                 assert.ok(Array.isArray(match));
                 assert.equal(match.length, 3);
                 assert.equal(match[0].type, "paragraph");

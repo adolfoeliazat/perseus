@@ -1,10 +1,8 @@
-const TreeTransformer = require('./tree-transformer.js');
+const TreeTransformer = require("./tree-transformer.js");
 
 // Return true iff n appears to be a node in a parse tree
 function isParseTreeNode(n) {
-    return n &&
-        typeof n === 'object' &&
-        typeof n.type === 'string';
+    return n && typeof n === "object" && typeof n.type === "string";
 }
 
 /**
@@ -76,8 +74,8 @@ function traverseAndReplace(node, f) {
 
 function characterCount(node) {
     let count = 0;
-    traverse(node, (n) => {
-        if (typeof n.content === 'string') {
+    traverse(node, n => {
+        if (typeof n.content === "string") {
             count += n.content.length;
         }
     });
@@ -115,14 +113,13 @@ this project.
 
 */
 
-
 function detectLint(parseTree) {
-    let tt = new TreeTransformer(parseTree);
+    const tt = new TreeTransformer(parseTree);
 
-    tt.traverse((n,tt) => {
+    tt.traverse((n, tt) => {
         if (tt.isTextNode(tt.currentNode)) {
             let next = tt.getNextSibling();
-            while(tt.isTextNode(next)) {
+            while (tt.isTextNode(next)) {
                 tt.currentNode.content += next.content;
                 tt.removeNextSibling();
                 next = tt.getNextSibling();
@@ -130,32 +127,23 @@ function detectLint(parseTree) {
         }
     });
 
-    tt.traverse((n,tt) => {
-        let prev = tt.getPrevSibling();
-        let next = tt.getNextSibling();
-        let prevtype = prev ? prev.type : 'none';
-        let nexttype = next ? next.type : 'none'
-//        console.log(`${prevtype} ${tt.currentNode.type} ${nexttype} > ^${tt.getAncestorTypes()}`);
-        console.log(tt.getAncestorTypes(), tt.currentNodeType, tt.textContent);
-    });
-
     traverseAndReplace(parseTree, n => {
-        if (n.type === 'unescapedDollar') {
+        if (n.type === "unescapedDollar") {
             return {
                 type: "lint",
                 content: [n],
-                display: 'inline',
-                title: 'Unescaped $',
+                display: "inline",
+                title: "Unescaped $",
                 message: `If writing math, pair with another $.
 Otherwise escape it by writing \\$.`,
             };
-        } else if (n.type === 'paragraph') {
+        } else if (n.type === "paragraph") {
             const length = characterCount(n);
             if (length > 500) {
                 return {
                     type: "lint",
                     content: [n],
-                    display: 'block',
+                    display: "block",
                     title: "Paragraph too long",
                     message: `Paragraphs should be shorter than 500 characters.
 Curent length: ${length}.`,

@@ -33,7 +33,7 @@ class Parser {
     }
 
     isIdentifier() {
-        let c = this.tokens[this.tokenIndex][0];
+        const c = this.tokens[this.tokenIndex][0];
         return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z");
     }
 
@@ -41,7 +41,7 @@ class Parser {
         let ns = this.parseNodeSelector();
 
         for (;;) {
-            let token = this.nextToken();
+            const token = this.nextToken();
 
             if (!token) {
                 return ns;
@@ -69,7 +69,7 @@ class Parser {
             this.consume();
         }
 
-        let t = this.nextToken();
+        const t = this.nextToken();
         if (t === "*") {
             this.consume();
             return new AnyNode();
@@ -121,8 +121,8 @@ class TypeSelector extends Selector {
     }
 
     match(state) {
-        let node = state.currentNode();
-        if (node.type == this.type) {
+        const node = state.currentNode();
+        if (node.type === this.type) {
             return [node];
         } else {
             return false;
@@ -148,12 +148,12 @@ class AncestorCombinator extends SelectorCombinator {
     }
 
     match(state) {
-        let rightResult = this.right.match(state);
+        const rightResult = this.right.match(state);
         if (rightResult) {
             state = state.clone();
             while (state.hasParent()) {
                 state.goToParent();
-                let leftResult = this.left.match(state);
+                const leftResult = this.left.match(state);
                 if (leftResult) {
                     return leftResult.concat(rightResult);
                 }
@@ -173,12 +173,12 @@ class ParentCombinator extends SelectorCombinator {
     }
 
     match(state) {
-        let rightResult = this.right.match(state);
+        const rightResult = this.right.match(state);
         if (rightResult) {
             if (state.hasParent()) {
                 state = state.clone();
                 state.goToParent();
-                let leftResult = this.left.match(state);
+                const leftResult = this.left.match(state);
                 if (leftResult) {
                     return leftResult.concat(rightResult);
                 }
@@ -198,12 +198,12 @@ class PreviousCombinator extends SelectorCombinator {
     }
 
     match(state) {
-        let rightResult = this.right.match(state);
+        const rightResult = this.right.match(state);
         if (rightResult) {
             if (state.hasPreviousSibling()) {
                 state = state.clone();
                 state.goToPreviousSibling();
-                let leftResult = this.left.match(state);
+                const leftResult = this.left.match(state);
                 if (leftResult) {
                     return leftResult.concat(rightResult);
                 }
@@ -223,12 +223,12 @@ class SiblingCombinator extends SelectorCombinator {
     }
 
     match(state) {
-        let rightResult = this.right.match(state);
+        const rightResult = this.right.match(state);
         if (rightResult) {
             state = state.clone();
             while (state.hasPreviousSibling()) {
                 state.goToPreviousSibling();
-                let leftResult = this.left.match(state);
+                const leftResult = this.left.match(state);
                 if (leftResult) {
                     return leftResult.concat(rightResult);
                 }

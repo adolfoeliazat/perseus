@@ -84,7 +84,7 @@ class TraversalState {
     }
 
     nextSibling() {
-        let siblings = this._containers.top();
+        const siblings = this._containers.top();
 
         // If we're at the root of the tree or if the parent is an
         // object instead of an array, then there are no siblings.
@@ -92,7 +92,7 @@ class TraversalState {
             return null;
         }
 
-        let index = this._indexes.top();
+        const index = this._indexes.top();
         if (siblings.length > index + 1) {
             return siblings[index + 1];
         } else {
@@ -101,7 +101,7 @@ class TraversalState {
     }
 
     previousSibling() {
-        let siblings = this._containers.top();
+        const siblings = this._containers.top();
 
         // If we're at the root of the tree or if the parent is an
         // object instead of an array, then there are no siblings.
@@ -109,7 +109,7 @@ class TraversalState {
             return null;
         }
 
-        let index = this._indexes.top();
+        const index = this._indexes.top();
         if (index > 0) {
             return siblings[index - 1];
         } else {
@@ -119,9 +119,9 @@ class TraversalState {
 
     // Remove the next sibling node (if there is one) from the tree.
     removeNextSibling() {
-        let siblings = this._containers.top();
+        const siblings = this._containers.top();
         if (siblings && Array.isArray(siblings)) {
-            let index = this._indexes.top();
+            const index = this._indexes.top();
             if (siblings.length > index + 1) {
                 return siblings.splice(index + 1, 1)[0];
             }
@@ -136,15 +136,15 @@ class TraversalState {
     // be traversed, so this can safely be used to reparent a node
     // beneath another.
     replace(newNodes) {
-        let parent = this._containers.top();
-        let index = this._indexes.top();
+        const parent = this._containers.top();
+        const index = this._indexes.top();
 
         if (!parent) {
             throw new Error("Can't replace the root of the tree");
         }
 
         // Treat an empty array the same as null or undefined: a deletion
-        if (Array.isArray(newNodes) && newNodes.length == 0) {
+        if (Array.isArray(newNodes) && newNodes.length === 0) {
             newNodes = null;
         }
 
@@ -177,7 +177,7 @@ class TraversalState {
     }
 
     clone() {
-        let clone = new TraversalState(this.root);
+        const clone = new TraversalState(this.root);
         clone._currentNode = this._currentNode;
         clone._containers = this._containers.clone();
         clone._indexes = this._indexes.clone();
@@ -216,7 +216,7 @@ class TraversalState {
         }
 
         this._currentNode = this.previousSibling();
-        let index = this._indexes.pop();
+        const index = this._indexes.pop();
         this._indexes.push(index - 1);
     }
 
@@ -287,11 +287,13 @@ class TreeTransformer {
             // TODO
             // Maybe do a switch here based on type field and have custom
             // recursion for each node type?
-            let keys = Object.keys(node);
+            const keys = Object.keys(node);
             keys.forEach(key => {
                 // Never recurse on the type property
-                if (key === "type") return;
-                let value = node[key];
+                if (key === "type") {
+                    return;
+                }
+                const value = node[key];
                 // Ignore properties that are null or primitive
                 // Only recurse on objects and arrays.
                 if (value && typeof value === "object") {
@@ -319,9 +321,8 @@ class TreeTransformer {
             // popped index value for that.
             let index = 0;
             while (index < node.length) {
-                let child = node[index];
                 state._indexes.push(index);
-                content += this._traverse(child, state, f);
+                content += this._traverse(node[index], state, f);
                 index = state._indexes.pop() + 1;
             }
             state._containers.pop();
