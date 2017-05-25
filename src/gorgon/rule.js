@@ -14,13 +14,7 @@ const Selector = require("./selector.js");
  * that is the result of the selector match and the array of strings
  * that results from the regexp match. So the signature is:
  *
- *  lint_callback(traversalState,
- *                currentNode,
- *                selectedNodes,
- *                matchedStrings)
- *
- * XXX: actually, maybe we can just pass the match results. In particular
- *  maybe we don't need to pass the traversal state.
+ *  lint_callback(selectedNodes, matchedStrings)
  *
  * If there is no lint at the currentNode, then this function should
  * return a falsy value. If there is lint, then the function should
@@ -28,25 +22,37 @@ const Selector = require("./selector.js");
  *
  * As a special case, if the node is a text node (that is, has a content
  * property of type string) then it can return an error message that
- * applies to only a portion of that string: {
+ * applies to only a portion of that string. This is done by returning
+ * an object of this form:
+ *   {
  *     message: the error message
  *     start: the start index of the error
  *     end: the end index of the error
- * }
+ *   }
  *
- * If a lint rule does not specify a callback function but does specify
- * an error message, then we'll use a default function that unconditionally
- * returns the specified message, and bases the start index on the pattern
- * match index.
+ * If you pass a string to the rule() constructor in place of a lint function
+ * then it will use a default function that unconditionally returns the
+ * error message. If the node is a text node, it will add the start and end
+ * indexes of the portion of the string that matched the pattern.
  *
- * When we want to report lint in existing content, we can just display
- * the error messages. When we want to display lint in the Perseus editor
- * we can use the result of the callback function to actually mutate the
- * markdown parse tree
+ * Rule.makeRule() is a factory method that takes a single object as its
+ * argument and is useful when lint rules are described in JSON data structures.
+ * In this case, it expects an object with string properties. The name
+ * property is passed as the first argument to the Rule() construtctor.
+ * The selector property, if specified, is passed to Selector.parse() and
+ * the resulting Selector object is used as the second argument to Rule().
+ * The pattern property specifies the third argument to Rule(). If this string
+ * begins with a '/', then it is turned into a RegExp. Otherwise it is passed
+ * to Rule() as a fixed string. Finally, if a lint property is defined it
+ * is passed as the final argument to Rule(), and otherwise the messsage
+ * property is defined.
  *
- * We may want to be able to specify rules (without functions) in JSON
- * files, so we also define a factory method that takes a single object
- * as its argument and is more flexible than the constructor.
+ * Once a Rule has been created with Rule() or Rule.makeRule(), you can 
+ * use it by calling its check() method. The arguments to this method are
+ * the same as the arguments that a TreeTransformer passes to its traversal
+ * callback function. So if you have a parse tree and a list of Rule objects
+ * you can use a TreeTransformer to visit each node, and then call the check()
+ * method of each Rule object while visiting that node.
  */
 class Rule {
     constructor(name, selector, pattern, lint) {
@@ -71,7 +77,7 @@ class Rule {
             options.name || "unnamed rule",
             options.selector ? Selector.parse(options.selector) : null,
             Rule.makePattern(options.pattern),
-            options.message
+            options.lint || options.message
         );
     }
 
