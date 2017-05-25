@@ -152,8 +152,8 @@ class SelectorList extends Selector {
 
     match(state) {
         for (let i = 0; i < this.selectors.length; i++) {
-            let s = this.selectors[i];
-            let result = s.match(state);
+            const s = this.selectors[i];
+            const result = s.match(state);
             if (result) {
                 return result;
             }
@@ -164,9 +164,8 @@ class SelectorList extends Selector {
     toString() {
         let result = "";
         for (let i = 0; i < this.selectors.length; i++) {
-            let s = this.selectors[i];
             result += i > 0 ? ", " : "";
-            result += s.toString();
+            result += this.selectors[i].toString();
         }
         return result;
     }
