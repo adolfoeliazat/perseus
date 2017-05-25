@@ -47,7 +47,7 @@ const Selector = require("./selector.js");
  * is passed as the final argument to Rule(), and otherwise the messsage
  * property is defined.
  *
- * Once a Rule has been created with Rule() or Rule.makeRule(), you can 
+ * Once a Rule has been created with Rule() or Rule.makeRule(), you can
  * use it by calling its check() method. The arguments to this method are
  * the same as the arguments that a TreeTransformer passes to its traversal
  * callback function. So if you have a parse tree and a list of Rule objects
