@@ -53,6 +53,11 @@ const Selector = require("./selector.js");
  * callback function. So if you have a parse tree and a list of Rule objects
  * you can use a TreeTransformer to visit each node, and then call the check()
  * method of each Rule object while visiting that node.
+ *
+ * TODO(davidflanagan): allow rules to be locale-sensitive. The rules for
+ * appropriate capitalization in a heading may vary from language to language
+ * for example, and we don't want to apply English rules to content in
+ * other languages.
  */
 class Rule {
     constructor(name, selector, pattern, lint) {
@@ -81,18 +86,18 @@ class Rule {
         );
     }
 
-    // Make a pattern from the specified string. If the string begins
-    // with '/', treat it as a regular expression. Otherwise, just
-    // return it as a string
-    static makePattern(text) {
-        if (!text || text[0] !== "/") {
-            return text;
+    // If the argument is a regular expression or a string that does
+    // not begin with / then just return it. Otherwise, compile it to
+    // a regular expression.
+    static makePattern(pattern) {
+        if (!pattern || pattern instanceof RegExp || pattern[0] !== "/") {
+            return pattern;
         }
 
-        const lastSlash = text.lastIndexOf("/");
-        const pattern = text.substring(1, lastSlash);
-        const flags = text.substring(lastSlash + 1);
-        return new RegExp(pattern, flags);
+        const lastSlash = pattern.lastIndexOf("/");
+        const expression = pattern.substring(1, lastSlash);
+        const flags = pattern.substring(lastSlash + 1);
+        return new RegExp(expression, flags);
     }
 
     // Check the node n to see if it violates this lint rule.
